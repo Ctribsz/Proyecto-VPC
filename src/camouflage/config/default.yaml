@@ -1,0 +1,65 @@
+project:
+  name: adversarial-camouflage-aerial
+  seed: 42
+  device: cuda
+
+paths:
+  data_root: data
+  dota_root: data/raw/dota_v2
+  processed_root: data/processed
+  calibration_root: data/calibration
+  patches_root: patches
+  results_root: results
+  figures_root: figures
+
+data:
+  dataset: dota_v2
+  split: train
+  image_size: 1024
+  target_classes:
+    - small-vehicle
+    - large-vehicle
+    - ship
+  cache_obbs: true
+
+model:
+  family: yolo
+  weights: yolov8n-obb.pt
+  conf_threshold: 0.25
+  iou_threshold: 0.7
+  task: obb
+
+attack:
+  texture_size: [256, 256]
+  batch_size: 4
+  steps: 1000
+  lr: 0.03
+  alpha: 1.0
+  losses:
+    det: 1.0
+    tv: 0.05
+    nps: 0.10
+    natural: 0.01
+
+eot:
+  enabled: true
+  brightness: [0.75, 1.25]
+  contrast: [0.80, 1.20]
+  rotation_deg: [-12.0, 12.0]
+  scale: [0.85, 1.15]
+  translation_px: [-24.0, 24.0]
+  blur_sigma: [0.0, 1.2]
+  jpeg_quality: [55, 95]
+
+physical:
+  palette_grid: [16, 16]
+  printer_profile: default
+  capture_distance_m: [20, 40, 60]
+  lighting: [sunny, cloudy, shadow]
+
+eval:
+  metrics:
+    - asr
+    - confidence_drop
+    - iou
+  output_dir: results/digital
