@@ -50,6 +50,8 @@ Place DOTA-v2.0 files under `data/raw/dota_v2/`. Keep raw data, caches, and gene
 
 The default configuration lives at `src/camouflage/config/default.yaml`. Use `.env` for local paths or credentials; start from `.env.example` and never commit real secrets.
 
+For Google Colab GPU execution, see `docs/COLAB.md` and use `src/camouflage/config/colab.yaml`.
+
 ## Development Notes
 
 - Keep experiments reproducible by recording config files, git commit hashes, and random seeds.
