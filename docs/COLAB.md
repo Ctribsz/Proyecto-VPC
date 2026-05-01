@@ -46,7 +46,9 @@ drive.mount('/content/drive')
 Create the expected folders:
 
 ```bash
-!mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v2
+!mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/zips
+!mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/images
+!mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/labels
 !mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/processed
 !mkdir -p /content/drive/MyDrive/Proyecto-VPC/data/calibration
 !mkdir -p /content/drive/MyDrive/Proyecto-VPC/results/digital
@@ -54,10 +56,23 @@ Create the expected folders:
 !mkdir -p /content/drive/MyDrive/Proyecto-VPC/figures
 ```
 
-Place DOTA-v2.0 under:
+The initial committed dataset artifact is the DOTA v1.0 label archive at:
 
 ```text
-/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v2
+data/raw/dota_v1/labelTxt-v1.0-20260501T040720Z-3-001.zip
+```
+
+The corresponding DOTA image archives are intentionally stored outside Git because they are several GB. Upload them to Drive under:
+
+```text
+/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/zips/
+```
+
+After extraction, keep the dataset under:
+
+```text
+/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/images/
+/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/labels/
 ```
 
 ## Verify Environment
@@ -86,7 +101,7 @@ What Colab can do now:
 - Verify CUDA/GPU availability.
 - Download YOLO OBB weights through Ultralytics when inference code is used.
 - Validate configs and script entrypoints.
-- Store DOTA data and outputs on Google Drive.
+- Store DOTA v1 image archives, extracted data, and outputs on Google Drive.
 
 What still needs implementation:
 

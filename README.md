@@ -44,7 +44,7 @@ paper/               LaTeX manuscript skeleton
 
 ## Data
 
-Place DOTA-v2.0 files under `data/raw/dota_v2/`. Keep raw data, caches, and generated results out of git. The `.gitkeep` files only preserve the directory structure.
+The initial DOTA v1.0 label archive is tracked under `data/raw/dota_v1/` as a small setup artifact. Keep full image archives, extracted images, caches, and generated results out of git; for Colab, store them in Google Drive under `/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/`.
 
 ## Configuration
 

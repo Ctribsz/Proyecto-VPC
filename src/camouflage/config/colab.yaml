@@ -5,7 +5,7 @@ project:
 
 paths:
   data_root: /content/drive/MyDrive/Proyecto-VPC/data
-  dota_root: /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v2
+  dota_root: /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1
   processed_root: /content/drive/MyDrive/Proyecto-VPC/data/processed
   calibration_root: /content/drive/MyDrive/Proyecto-VPC/data/calibration
   patches_root: /content/drive/MyDrive/Proyecto-VPC/patches
@@ -13,7 +13,7 @@ paths:
   figures_root: /content/drive/MyDrive/Proyecto-VPC/figures
 
 data:
-  dataset: dota_v2
+  dataset: dota_v1
   split: train
   image_size: 1024
   target_classes:
