@@ -28,6 +28,13 @@ python scripts/eval_digital.py --config src/camouflage/config/default.yaml
 python scripts/eval_physical.py --config src/camouflage/config/default.yaml
 ```
 
+Run the Colab clean-image YOLO baseline after DOTA images are available in Drive:
+
+```bash
+python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --dry-run
+python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --max-images 10
+```
+
 ## Layout
 
 ```text

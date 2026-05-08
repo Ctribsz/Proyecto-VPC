@@ -63,3 +63,11 @@ eval:
     - confidence_drop
     - iou
   output_dir: /content/drive/MyDrive/Proyecto-VPC/results/digital
+
+baseline:
+  image_dir: /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/images
+  label_dir: /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/labels
+  zip_dir: /content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/zips
+  output_dir: /content/drive/MyDrive/Proyecto-VPC/results/digital/baseline_yolo_obb
+  max_images: 20
+  image_size: 1024

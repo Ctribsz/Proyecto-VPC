@@ -91,6 +91,33 @@ Validate the Colab config:
 !python scripts/eval_physical.py --config src/camouflage/config/colab.yaml
 ```
 
+## Baseline YOLO OBB
+
+Before training any adversarial texture, confirm that YOLO detects objects in clean DOTA images.
+
+First check that Drive contains images, labels, and/or zip archives in the expected folders:
+
+```bash
+!python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --dry-run
+```
+
+If `Images found` is greater than zero, run a small baseline:
+
+```bash
+!python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --max-images 10
+```
+
+Baseline outputs are written to:
+
+```text
+/content/drive/MyDrive/Proyecto-VPC/results/digital/baseline_yolo_obb/
+```
+
+Expected files:
+
+- `predictions.json` with YOLO classes, confidences, and OBB coordinates.
+- `plots/` with annotated baseline images.
+
 ## Current Limitation
 
 The repository is currently a scaffold. `AttackTrainer.run()` still raises `NotImplementedError`, so full adversarial training will not run until the DOTA loader, YOLO victim model, overlay, EOT transforms, and losses are connected in the trainer.
@@ -101,6 +128,7 @@ What Colab can do now:
 - Verify CUDA/GPU availability.
 - Download YOLO OBB weights through Ultralytics when inference code is used.
 - Validate configs and script entrypoints.
+- Run a clean-image YOLOv8 OBB baseline and save predictions/plots.
 - Store DOTA v1 image archives, extracted data, and outputs on Google Drive.
 
 What still needs implementation:

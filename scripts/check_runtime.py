@@ -24,12 +24,24 @@ def main() -> int:
     else:
         print("cuda device: none")
 
-    for package_name in ("ultralytics", "kornia", "albumentations", "camouflage"):
+    for package_name in (
+        "ultralytics",
+        "kornia",
+        "albumentations",
+        "adversarial-camouflage-aerial",
+    ):
         try:
             version = importlib.metadata.version(package_name)
         except importlib.metadata.PackageNotFoundError:
             version = "not installed"
         print(f"{package_name}: {version}")
+
+    try:
+        import camouflage
+    except ImportError:
+        print("camouflage module: not importable")
+    else:
+        print(f"camouflage module: {camouflage.__version__}")
 
     return 0
 
