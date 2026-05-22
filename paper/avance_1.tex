@@ -1,0 +1,84 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{subcaption}
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+\title{\textbf{Reporte de Avance del Proyecto de Investigación} \\ \vspace{0.5cm} \Large \textit{Adversarial Camouflage para Evasión de Detectores de Objetos en Imágenes Aéreas: Diseño, Optimización y Evaluación bajo Condiciones Físicas Reales}}
+\author{\textbf{Diederich Solís}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Los sistemas de detección aérea automatizada, basados en drones y vigilancia satelital, utilizan modelos avanzados como YOLO (entrenados en datasets como DOTA y xView) para la identificación de vehículos y embarcaciones. Si bien se despliegan en aplicaciones de seguridad y monitoreo, su robustez ante ataques adversariales aplicados como textura completa sobre objetos reales ha sido poco estudiada en comparación con los parches adversariales frontales. Este proyecto propone el diseño e implementación de un pipeline de optimización de texturas adversariales que, aplicadas como cobertura completa sobre vehículos en vista cenital, evadan la detección de YOLOv8 OBB. Se incorporan técnicas de Expectation Over Transformation (EoT), Non-Printability Score (NPS), y un término de naturalidad. Este documento reporta los avances iniciales consistentes en el despliegue del entorno, la evaluación del modelo \textit{baseline} y las pruebas de concepto para la inyección de ruido adversarial estructurado.
+\end{abstract}
+
+\vspace{0.5cm}
+
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+\subsection{Planteamiento del Problema}
+Actualmente, los algoritmos de detección de objetos mediante Redes Neuronales Convolucionales (CNNs), como la familia YOLO, son el estándar en aplicaciones de vigilancia aérea y monitoreo. Sin embargo, estudios recientes han demostrado que estas redes son vulnerables a perturbaciones adversariales. A diferencia de los ataques clásicos que utilizan pequeños parches sobre señales de tráfico o personas desde una vista frontal, la evasión en imágenes aéreas requiere abordar la oclusión de objetos completos desde perspectivas cenitales, lidiando con variaciones extremas de escala, rotación e iluminación. Comprender esta vulnerabilidad es vital tanto para evaluar la robustez de sistemas críticos como para la investigación en privacidad ante la vigilancia aérea automatizada.
+
+\subsection{Propuesta de Solución y Diferenciación}
+Se propone diseñar e implementar un pipeline de optimización de texturas adversariales (camuflaje) para evadir detectores de objetos orientados. El proyecto se diferencia de la literatura actual por:
+\begin{enumerate}
+    \item Abordar ataques sobre objetos completos en vista cenital (Oriented Bounding Boxes).
+    \item Realizar una evaluación física real en el dominio aéreo utilizando una maqueta a escala fotografiada en condiciones controladas, simulando la cámara de un dron.
+    \item Integrar opcionalmente un prior de naturalidad en la textura (Total Variation) para que esta se asimile a patrones de camuflaje convencionales y sea menos perceptible al ojo humano.
+\end{enumerate}
+
+\section{Avances Técnicos Alcanzados}
+
+Para materializar la propuesta, el trabajo se ha dividido en fases. Durante este primer entregable, los esfuerzos se centraron en preparar la infraestructura base, validar el modelo objetivo y construir los fundamentos de la manipulación de la imagen para el ataque digital.
+
+\subsection{1. Arquitectura de Software y Pipeline de Datos}
+Dada la complejidad computacional que implica el uso del dataset DOTA v1.0 y la optimización de tensores por gradientes, se estableció la siguiente arquitectura técnica:
+\begin{itemize}
+    \item \textbf{Entorno Híbrido de Cómputo:} Se integró un entorno en \textit{Google Colab} (con hardware acelerado por GPUs como NVIDIA T4/A100) gestionado a través de scripts de validación (\texttt{check\_runtime.py}).
+    \item \textbf{Almacenamiento de Datos (Drive integration):} Las imágenes de alta resolución no pueden alojarse en repositorios tradicionales de código. Por lo tanto, se diseñó un pipeline que lee de forma directa los sets de entrenamiento e inferencia desde Google Drive, manteniendo el versionamiento de código exclusivamente en GitHub.
+    \item \textbf{Empaquetado Modular:} Se estructuró el repositorio bajo estándares profesionales, encapsulando la lógica en un módulo instalable en Python (\texttt{src/camouflage}). Esto incluye la definición de configuraciones dinámicas (\texttt{yaml}) y esqueletos de evaluación (\texttt{eval\_digital.py}, \texttt{eval\_physical.py}).
+\end{itemize}
+
+\subsection{2. Implementación y Evaluación del \textit{Baseline} (YOLOv8 OBB)}
+Antes de proceder con la generación de texturas evasivas, se requirió validar el modelo detector en su estado regular para establecer las métricas base.
+\begin{itemize}
+    \item \textbf{Carga de YOLOv8n-obb:} Se configuró el modelo pre-entrenado específico para detección de polígonos orientados (OBB). Esto es fundamental porque un "bounding box" ortogonal estándar incluye demasiado espacio de fondo en imágenes oblicuas o cenitales, lo cual arruinaría el mapeo de la textura.
+    \item \textbf{Verificación en Imágenes Limpias:} Mediante el script \texttt{run\_yolo\_baseline.py}, el modelo se ejecutó satisfactoriamente sobre imágenes limpias de validación. Esto asegura que los descensos en el \textit{Attack Success Rate (ASR)} que se obtengan en fases posteriores serán exclusivamente consecuencia del camuflaje adversarial generado.
+\end{itemize}
+
+\subsection{3. Prueba de Concepto Visual: Overlay Adversarial Preliminar}
+Como puente entre la detección clásica y la optimización matemática de perturbaciones, se elaboró un \textit{Proof of Concept (PoC)} desarrollado en un notebook interactivo (\texttt{01\_overlay\_demo.ipynb}):
+\begin{enumerate}
+    \item \textbf{Inferencia Inicial:} Se procesa una imagen aérea donde YOLO identifica los vehículos con altos niveles de confianza.
+    \item \textbf{Extracción Analítica de Máscaras:} Utilizando los tensores resultantes de la red, se extraen exactamente los 4 vértices de cada vehículo detectado (\texttt{obb.xyxyxyxy}).
+    \item \textbf{Inyección de Ruido Delimitada:} A través del uso de \textit{OpenCV} y álgebra matricial con \textit{Numpy}, se generó ruido estocástico confinado estrictamente a la topología orientada de los vehículos, respetando los ángulos.
+    \item \textbf{Re-evaluación:} La imagen intervenida se vuelve a ingresar al detector. Este demo valida que la inserción de oclusiones afecta las detecciones, abriendo la puerta al siguiente paso: reemplazar el ruido aleatorio por una textura calculada diferencialmente.
+\end{enumerate}
+
+\section{Cronograma y Próximos Pasos}
+
+El progreso actual sienta las bases necesarias para la experimentación matemática. Las próximas iteraciones del desarrollo se enfocarán en las siguientes áreas metodológicas:
+
+\begin{itemize}
+    \item \textbf{Implementación de la Adversarial Loss:} Diseño del bucle de entrenamiento que reciba las predicciones de YOLOv8 y propague los gradientes hacia la textura, con el objetivo de maximizar el error de clasificación.
+    \item \textbf{Desarrollo de EoT con Kornia:} Integración de transformaciones diferenciables (rotación, cambio de escala, iluminación y perspectiva) durante la optimización del tensor de la textura para garantizar que el parche funcione bajo cambios físicos del dron simulado.
+    \item \textbf{Restricciones de Impresión (NPS y TV):} Adición del \textit{Non-Printability Score} para asegurar la viabilidad de la textura una vez impresa por hardware convencional, y la restricción de Variación Total (TV) para regularizar los gradientes de color.
+    \item \textbf{Cálculo del Attack Success Rate (ASR):} Realizar ablación del término EoT y analizar las curvas de degradación por ángulos y distancias.
+\end{itemize}
+
+\end{document}
