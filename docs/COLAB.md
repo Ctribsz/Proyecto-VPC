@@ -22,7 +22,7 @@ Clone the repo and install it in editable mode:
 
 ```bash
 !git clone git@github.com:Ctribsz/Proyecto-VPC.git
-%cd Proyecto-VPC
+%cd /content/Proyecto-VPC
 !pip install -r requirements.txt
 ```
 
@@ -30,7 +30,7 @@ If SSH is not configured in Colab, use HTTPS instead:
 
 ```bash
 !git clone https://github.com/Ctribsz/Proyecto-VPC.git
-%cd Proyecto-VPC
+%cd /content/Proyecto-VPC
 !pip install -r requirements.txt
 ```
 
@@ -80,12 +80,14 @@ After extraction, keep the dataset under:
 Run the runtime check:
 
 ```bash
+%cd /content/Proyecto-VPC
 !python scripts/check_runtime.py
 ```
 
 Validate the Colab config:
 
 ```bash
+%cd /content/Proyecto-VPC
 !python scripts/train_attack.py --config src/camouflage/config/colab.yaml
 !python scripts/eval_digital.py --config src/camouflage/config/colab.yaml
 !python scripts/eval_physical.py --config src/camouflage/config/colab.yaml
@@ -98,12 +100,14 @@ Before training any adversarial texture, confirm that YOLO detects objects in cl
 First check that Drive contains images, labels, and/or zip archives in the expected folders:
 
 ```bash
+%cd /content/Proyecto-VPC
 !python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --dry-run
 ```
 
 If `Images found` is greater than zero, run a small baseline:
 
 ```bash
+%cd /content/Proyecto-VPC
 !python scripts/run_yolo_baseline.py --config src/camouflage/config/colab.yaml --max-images 10
 ```
 
