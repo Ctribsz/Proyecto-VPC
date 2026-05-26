@@ -7,7 +7,7 @@ Este repositorio contiene el código y la documentación del proyecto de investi
 
 Enlaces (video y documento)
 - Notebook principal de ataque (local): `experiments/Ataque_Adversarial.ipynb`
-- Video explicativo (YouTube): [Enlace al video]()
+- Video explicativo (YouTube): https://youtu.be/rvVKcorkqAA
 - Documento: 
 
 Para actualizar los enlaces:
