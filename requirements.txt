@@ -1,0 +1,2 @@
+# Installs the package and development tools declared in pyproject.toml.
+-e .[dev]
