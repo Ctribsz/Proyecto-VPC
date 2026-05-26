@@ -1,0 +1,232 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{babel}
+\babelprovide[main,import]{spanish}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{setspace}
+\usepackage{url}
+
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\emergencystretch=2em
+\onehalfspacing
+
+\title{\textbf{Adversarial Camouflage para Detección Aérea con YOLOv8-OBB}\\
+\large Optimización Diferenciable de Texturas para Evasión de Detecciones en DOTA}
+\author{Proyecto VPC}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este proyecto estudia la vulnerabilidad de detectores de objetos en imágenes aéreas ante texturas adversariales aplicadas sobre vehículos. Se utiliza YOLOv8-OBB como modelo víctima y DOTA v1.0 como fuente de escenas aéreas con objetos orientados. El trabajo evolucionó desde pruebas iniciales de oclusión con texturas fijas hacia un ataque adversarial real, donde la textura es un tensor optimizable por gradiente y se aplica mediante operaciones diferenciables de \textit{torch}/\textit{kornia}. Los resultados preliminares muestran que, para un vehículo objetivo, YOLOv8-OBB detectaba inicialmente tres cajas asociadas a \textit{large vehicle} con confianzas aproximadas de 0.82, 0.80 y 0.79; después de optimizar y aplicar la textura adversarial, el número de detecciones dentro del mismo \textit{bounding box} bajó a cero. Además, una evaluación preliminar intra-imagen sobre 20 objetos mostró éxito en 19 casos, aunque la validación multi-imagen queda como trabajo pendiente. Estos resultados validan el pipeline de ataque digital y establecen una base reproducible para evaluar robustez, transferencia y versiones físicas del camuflaje.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+Los sistemas modernos de vigilancia aérea usan detectores de objetos para identificar vehículos, barcos, aeronaves e infraestructura en imágenes capturadas desde drones o satélites. Modelos como YOLOv8-OBB permiten detectar objetos con cajas orientadas, lo cual es especialmente útil en escenarios aéreos donde los objetos aparecen rotados y a escalas pequeñas. Sin embargo, estos modelos pueden ser sensibles a perturbaciones adversariales: modificaciones visuales diseñadas para reducir la confianza del detector o provocar fallos de localización/clasificación.
+
+El objetivo del proyecto es evaluar si una textura colocada sobre la huella de un objeto aéreo puede reducir o eliminar su detección por YOLOv8-OBB. A diferencia de una simple oclusión, el enfoque final busca una textura optimizada por gradiente contra el modelo víctima. La textura no se fija manualmente, sino que se aprende como un tensor diferenciable.
+
+\subsection{Objetivo general}
+
+Diseñar y validar un pipeline reproducible para generar y evaluar texturas adversariales contra YOLOv8-OBB en imágenes aéreas de DOTA v1.0.
+
+\subsection{Objetivos específicos}
+
+\begin{itemize}
+    \item Preparar un entorno reproducible en Google Colab con GPU T4.
+    \item Validar un baseline de detección limpia usando YOLOv8-OBB.
+    \item Comparar texturas fijas como prueba de concepto inicial.
+    \item Implementar un ataque adversarial diferenciable que optimice una textura mediante backpropagation.
+    \item Evaluar el efecto local del ataque dentro del objeto objetivo.
+    \item Explorar una textura universal aplicada a múltiples objetos.
+\end{itemize}
+
+\section{Contexto Técnico}
+
+\subsection{Dataset DOTA v1.0}
+
+DOTA es un dataset de imágenes aéreas con anotaciones de objetos orientados \cite{dota}. Contiene clases como \textit{small vehicle}, \textit{large vehicle}, \textit{ship}, \textit{plane}, entre otras. Para este proyecto se priorizaron vehículos por ser una clase relevante para camuflaje adversarial en vista cenital.
+
+Las imágenes se almacenaron fuera de Git debido a su tamaño y se usaron desde Google Drive bajo la ruta:
+
+\begin{verbatim}
+/content/drive/MyDrive/Proyecto-VPC/data/raw/dota_v1/
+\end{verbatim}
+
+El repositorio mantiene scripts, notebooks, configuraciones y etiquetas iniciales, pero no versiona imágenes pesadas ni resultados generados.
+
+\subsection{Modelo víctima}
+
+El detector usado es YOLOv8n-OBB, cargado mediante Ultralytics \cite{yolov8}. Este modelo predice cajas orientadas y soporta clases de DOTA. Para entrenamiento adversarial no se utiliza \texttt{YOLO.predict()}, ya que esa ruta incluye inferencia con NMS y no propaga gradientes hacia la imagen. En cambio, se accede al módulo interno:
+
+\begin{verbatim}
+yolo = YOLO("yolov8n-obb.pt")
+model = yolo.model.eval()
+\end{verbatim}
+
+Todos los parámetros del modelo se congelan. Únicamente se optimiza la textura.
+
+\section{Metodología}
+
+\subsection{Fase 1: Baseline con imágenes limpias}
+
+Primero se ejecutó YOLOv8-OBB sobre imágenes DOTA sin modificaciones. El objetivo fue verificar que el modelo detectara vehículos correctamente antes de aplicar cualquier textura. El baseline guarda predicciones y visualizaciones en:
+
+\begin{verbatim}
+/content/drive/MyDrive/Proyecto-VPC/results/digital/baseline_yolo_obb/
+\end{verbatim}
+
+Esta fase es esencial: si el modelo no detecta vehículos en la imagen limpia, no se puede afirmar que una textura adversarial haya causado una evasión.
+
+\subsection{Fase 2: Texturas fijas como prueba de concepto}
+
+Se probaron texturas fijas como \textit{checkerboard}, ruido aleatorio, camuflaje verde/gris, franjas diagonales y gris sólido. Estas pruebas no constituyen un ataque adversarial real porque la textura no se optimiza contra el modelo. Sin embargo, sirvieron para validar el pipeline de localizar objetos, aplicar una textura sobre la región del objeto, volver a ejecutar YOLO y medir cambios de detección/confianza.
+
+\subsection{Fase 3: Ataque adversarial diferenciable}
+
+El ataque final optimiza una textura $T$ representada mediante un tensor libre $\theta$:
+
+\begin{equation}
+T = \sigma(\theta)
+\end{equation}
+
+donde $\sigma$ es la función sigmoide, garantizando que los valores de la textura estén en el rango $[0,1]$.
+
+La textura se reescala al tamaño exacto del objeto y se coloca sobre la imagen usando operaciones de \textit{torch}. No se usan operaciones de PIL, \textit{crop}, \textit{paste} o \textit{blend} en el camino diferenciable, porque romperían el grafo de gradientes.
+
+\subsection{Forward diferenciable de YOLOv8-OBB}
+
+Se validó que la salida cruda del modelo tuviera el formato:
+
+\begin{equation}
+[B, 4 + n_c + 1, A]
+\end{equation}
+
+donde $B$ es el tamaño de batch, $4$ corresponde a la caja, $n_c$ al número de clases y $1$ al ángulo. En el experimento con DOTA, $n_c=15$, por lo que el tensor tuvo forma:
+
+\begin{verbatim}
+raw.shape = [1, 20, 21504]
+\end{verbatim}
+
+El \textit{sanity check} confirmó que el tensor de clases se encuentra en rango de confianza posterior a sigmoide y que el gradiente llega a la textura:
+
+\begin{verbatim}
+theta.grad.abs().sum() > 0
+\end{verbatim}
+
+\subsection{Función de pérdida}
+
+Inicialmente se probó una pérdida basada en el promedio de las confianzas dentro del objeto. Este enfoque diluía demasiado la señal, porque muchas posiciones internas tenían confianza baja aunque la detección dominante siguiera siendo fuerte.
+
+La pérdida corregida ataca la máxima confianza objetivo dentro de una zona cercana al objeto:
+
+\begin{equation}
+L_{det} = \max_{a \in \mathcal{A}_{obj}} p(y \in \mathcal{C}_{target} \mid a)
+\end{equation}
+
+donde $\mathcal{A}_{obj}$ son los puntos/candidatos cuyo centro cae dentro de la región del objeto, y $\mathcal{C}_{target}$ corresponde a \textit{small vehicle} y \textit{large vehicle}.
+
+Esta corrección fue clave: el valor inicial de \texttt{target\_conf\_max\_inside} se alineó con las confianzas observadas por \texttt{YOLO.predict()}, alrededor de 0.84.
+
+\subsection{Optimización}
+
+Para la primera prueba se usó una configuración agresiva sin EoT ni regularización:
+
+\begin{itemize}
+    \item Optimizador: Adam.
+    \item Learning rate: 0.10.
+    \item Iteraciones: 500.
+    \item Sin \textit{Total Variation} inicialmente.
+    \item Sin \textit{EoT} inicialmente.
+\end{itemize}
+
+La razón de empezar sin EoT/TV es metodológica: si el ataque básico de un objeto no funciona, no tiene sentido entrenar versiones más largas o robustas.
+
+\section{Resultados Preliminares}
+
+\subsection{Ataque local a un objeto}
+
+La prueba más importante se realizó sobre un vehículo \textit{large vehicle}. Antes del ataque, YOLOv8-OBB detectaba tres cajas dentro del \textit{bounding box} objetivo:
+
+\begin{table}[h]
+\centering
+\caption{Detecciones dentro del objeto antes del ataque}
+\begin{tabular}{lcc}
+\toprule
+Clase & Confianza & Estado \\
+\midrule
+large vehicle & 0.8176 & Detectado \\
+large vehicle & 0.8046 & Detectado \\
+large vehicle & 0.7864 & Detectado \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Después de optimizar y aplicar la textura, el número de detecciones dentro del mismo \textit{bounding box} fue:
+
+\begin{verbatim}
+Original: 3 detecciones
+Atacado:  0 detecciones
+\end{verbatim}
+
+Este resultado valida que el ataque adversarial de un objeto funciona: el detector sigue operando sobre la imagen, pero deja de reconocer el vehículo específico intervenido.
+
+\subsection{Evaluación multi-objeto preliminar}
+
+Se evaluó una textura optimizada sobre múltiples vehículos dentro de una misma escena DOTA. En una prueba preliminar sobre 20 objetos, el resultado observado fue:
+
+\begin{itemize}
+    \item 19 de 20 objetos tuvieron reducción de detecciones dentro de su región.
+    \item En muchos casos la detección pasó de 1--3 detecciones a 0.
+    \item El único caso no exitoso redujo la confianza aproximada de 0.82 a 0.38.
+\end{itemize}
+
+Esto sugiere que la textura aprendida tiene transferencia intra-imagen. Sin embargo, esta evaluación aún no demuestra robustez universal sobre múltiples imágenes, porque una parte importante de la prueba se concentró en la imagen P0002.png.
+
+\subsection{Interpretación}
+
+Los resultados actuales cumplen el objetivo central del proyecto: demostrar que una textura optimizada por gradiente puede causar evasión local de YOLOv8-OBB en objetos aéreos. La comparación correcta no es la cantidad total de detecciones de toda la imagen, sino las detecciones dentro de la región atacada. En escenas DOTA hay decenas o cientos de vehículos; por ello, aunque la imagen global siga mostrando detecciones, el ataque puede ser exitoso localmente si elimina la detección del objeto objetivo.
+
+\section{Limitaciones}
+
+\begin{itemize}
+    \item La máscara actual usa un \textit{bounding box} rectangular, no el polígono OBB exacto.
+    \item La textura optimizada puede ser visualmente evidente y no necesariamente natural.
+    \item La evaluación universal multi-imagen todavía está pendiente.
+    \item No se ha validado transferencia a modelos más grandes como YOLOv8s-OBB o YOLOv8m-OBB.
+    \item No se ha realizado una prueba física impresa.
+\end{itemize}
+
+\section{Trabajo Futuro}
+
+Los siguientes pasos recomendados son:
+
+\begin{enumerate}
+    \item Evaluar la textura universal en múltiples imágenes DOTA, limitando la cantidad de objetos por imagen para evitar sobreajuste a una sola escena.
+    \item Agregar métricas por imagen: tasa de éxito, reducción de detecciones y caída promedio de confianza.
+    \item Reintroducir EoT de forma gradual para mejorar robustez ante rotación, escala e iluminación.
+    \item Agregar regularizadores TV/NPS para obtener texturas menos ruidosas y potencialmente imprimibles.
+    \item Probar transferencia a YOLOv8s-OBB.
+    \item Documentar una prueba cualitativa con imágenes sintéticas o una prueba física controlada si el tiempo lo permite.
+\end{enumerate}
+
+\section{Conclusión}
+
+El proyecto logró pasar de un pipeline inicial de texturas fijas a un ataque adversarial real contra YOLOv8-OBB. Se validó el forward diferenciable del modelo, se confirmó la existencia de gradiente hacia la textura y se diseñó una pérdida alineada con la confianza máxima del detector dentro del objeto. El resultado principal es que un vehículo inicialmente detectado con múltiples cajas de alta confianza dejó de ser detectado dentro de su región después de aplicar una textura optimizada por gradiente. Esto demuestra la viabilidad del enfoque y deja una base clara para extender el ataque hacia texturas universales, evaluación multi-imagen y pruebas físicas.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
